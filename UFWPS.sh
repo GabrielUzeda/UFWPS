@@ -321,7 +321,15 @@ install_extensions_prompt() {
 install_theme() {
     out "Cloning and installing the theme..." center info
     git clone https://github.com/vinceliuice/Graphite-gtk-theme.git
-    sudo ./Graphite-gtk-theme/install.sh -g -l -s compact --tweaks rimless float
+    # install.sh asks for sassc without -y and aborts without a tty; -g means GDM theme (not GTK), and -l
+    # would write libadwaita links into /root under sudo, so those are done below as the user
+    sudo dnf install -y sassc
+    sudo ./Graphite-gtk-theme/install.sh -s compact --tweaks rimless float
+    gsettings set org.gnome.desktop.interface gtk-theme "Graphite-Dark-compact"
+    mkdir -p ~/.config/gtk-4.0
+    for item in assets gtk.css gtk-dark.css; do
+        ln -sf "/usr/share/themes/Graphite-Dark-compact/gtk-4.0/$item" ~/.config/gtk-4.0/"$item"
+    done
     sudo dnf install -y papirus-icon-theme
     out "Theme and icon installation complete!" center success
     out "Setting Papirus as default icon theme..." center info
@@ -379,7 +387,7 @@ install_extensions() {
     [Service]
     Type=oneshot
     ExecStart=%h/.config/systemd/user/enable_extensions.sh
-    ExecStartPost=rm -f %h/.config/systemd/user/extensionssetup.service && %h/.config/systemd/user/enable_extensions.sh
+    ExecStartPost=/usr/bin/rm -f %h/.config/systemd/user/extensionssetup.service %h/.config/systemd/user/default.target.wants/extensionssetup.service
     RemainAfterExit=true
 
     [Install]
@@ -482,6 +490,8 @@ optimizations() {
         out "Chipset not detected automatically. Would you like to continue with hardware acceleration driver installation? [Y/N]" center info
         option=$(input)
         if [[ "$option" =~ [Yy] ]]; then
+            out "Cannot pick a driver for an unknown chipset: install the VA-API driver for your GPU manually." left warning
+        else
             out "Skipping hardware acceleration driver installation." left warning
         fi
     fi

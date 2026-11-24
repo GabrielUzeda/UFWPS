@@ -55,6 +55,7 @@ Targeted at **Fedora Workstation 45** (GNOME 51).
 - Optimization of startup services
 - Configurable debloating options
 - NetworkManager optimization
+- Optional service debloat for GNOME (`gnome-debloat.sh`, run `sudo ./gnome-debloat.sh --list`; details in [docs/servicos-gnome.md](docs/servicos-gnome.md))
 
 ## 🛠️ Installation
 
