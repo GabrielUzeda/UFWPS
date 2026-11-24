@@ -1,65 +1,62 @@
-# Serviços do Fedora Workstation 45 (GNOME): o que sai e o que fica
+# Serviços do Fedora Workstation (GNOME): o que sai e o que fica
 
-Adaptado do método do rakuos-cosmic-debloat. Medido numa VM KVM com Fedora 45 Workstation
-stock (GNOME Shell 51, 4 GB), **PSS no idle após reboot** (170 s de espera), um grupo por vez,
-acumulado. Baseline: **1218 MB**, ruído ~4 MB. Final com os 11 grupos: **753 MB** (-465 MB, -38%).
-Smoke após cada grupo: gnome-shell de pé, notificações, NetworkManager conectado, sem unit falha,
-hora sincronizada. Dependências conferidas com `dnf remove --assumeno` (cascata) no stock.
+Medido em VM Fedora 45 Workstation limpa (QEMU/KVM, 4 GB, AMD passthrough). PSS somado de todos os processos no idle,
+com reboot e ~170 s de espera antes de cada medição; ruído ~4 MB. Script: `gnome-debloat.sh` (`--list`, `--dry-run`,
+`all` = grupos 1–6). Restore: cabeçalho do script (estado em `/var/lib/gnome-debloat/`).
 
-Uso: `sudo ./gnome-debloat.sh --list | --dry-run all | 1,3,8`. `all` = grupos 1 a 6.
+Total com todos os grupos: **1218 → 679 MB (−539 MB, −44%)**.
 
 ## Grupos
 
-| # | Grupo | MB | O que muda | Perde |
+| Grupo | O que faz | Ganho (MB) | Em `all` | Perde |
 |---|---|---|---|---|
-| 1 | servicos | 10 | mask: auditd, ModemManager, systemd-homed, unbound-anchor, mcelog (já falhava), raid-check/mdmonitor, iscsi, sssd-kcm | auditoria, modem, RAID/iSCSI se em uso |
-| 2 | energia | 31 | `power-profiles-daemon` no lugar de tuned + tuned-ppd (mesma API `net.hadess.PowerProfiles`, o `--allowerasing` troca) | tuning do tuned |
-| 3 | gnome-sw | 330 | gnome-software deixa de subir no login; abre sob demanda pelo D-Bus. Inclui o dnf5daemon-server que ele puxa (348 MB de pico) | aviso de update em segundo plano |
-| 4 | indexador | 10 | mask localsearch-3 | busca por conteúdo |
-| 5 | a11y | 0 | remove orca/speech-dispatcher/brltty | leitor de tela (ganho só em disco) |
-| 6 | vmguest | 0 | remove guest tools; pulado dentro de VM | integração do hypervisor |
-| 7* | calendario | 46 | mask evolution-source/calendar/addressbook/alarm | eventos no menu de data, Calendar/Contacts |
-| 8* | print | 8 | remove cups, hplip, filtros (29 pacotes) | imprimir/escanear |
-| 9* | avahi | ~0 | mask avahi | descoberta de impressora/`.local` |
-| 10* | tempo | 0 | systemd-timesyncd no lugar do chrony | NTS |
-| 11* | firewall | 27 | nftables (ssh, mDNS, dhcpv6 de entrada) no lugar do firewalld | zona Workstation (portas 1025-65535 fecham), firewall-cmd |
+| 1 servicos | mascara auditd, ModemManager, systemd-homed, unbound-anchor, mcelog, mdraid, iscsi, sssd-kcm | 10 | sim | trilha de auditoria; modem, homed e RAID se em uso |
+| 2 energia | tuned + tuned-ppd → power-profiles-daemon (mesma API D-Bus) | 31 | sim | tuning do tuned; pulado se o TLP está instalado |
+| 3 gnome-sw | gnome-software deixa de subir no login (abre sob demanda) | 330 | sim | refresh e aviso de update em segundo plano |
+| 4 indexador | mascara localsearch (tracker) | 10 | sim | busca por conteúdo |
+| 5 a11y | remove orca, speech-dispatcher | 0 (só disco) | sim | leitor de tela |
+| 6 vmguest | remove agentes de VM (pulado em VM) | 0 | sim | integração do hypervisor |
+| 7 calendario | mascara evolution-source-registry e factories | 46 | não | agenda no menu de data, Calendar/Contacts |
+| 8 print | remove cups, hplip, filtros | 8 | não | impressão/escaneamento |
+| 9 avahi | mascara avahi | ~1 | não | descoberta mDNS (impressora, .local) |
+| 10 tempo | chrony → systemd-timesyncd | ~1 | não | NTS |
+| 11 firewall | firewalld → tabela nftables equivalente | 27 | não | zona FedoraWorkstation (portas 1025-65535 fecham) |
+| 12 ibus-motores | remove ibus-typing-booster e motores CJK/indic fora das fontes de entrada | 77 | não | digitação com sugestão/emoji, CJK |
+| 13 smartcard | remove pcsc-lite + opensc (mantém pcsc-lite-libs) | ~1 | não | login/PIV/PKCS#11 com cartão ou token |
 
-\* fora do `all`: perdem função visível ou mudam postura de segurança.
+Por que alguns dão ~0: orca, speech-dispatcher e agentes de VM não rodam no idle (ganho só em disco, e a VM QEMU
+não tem vbox/vmware/spice); avahi (~1 MB) e chrony (~2 MB, trocado por timesyncd ~1 MB) estão no ruído.
 
-## O que NÃO pode sair (testado, o dnf recusa por proteger o gnome-shell)
+**Grupo 3.** Mascarar `gnome-software.service` quebra o app: o D-Bus (`org.gnome.Software.service`,
+`SystemdService=gnome-software.service`) o ativa por essa unit. Em vez disso o script copia
+`gnome-session-services.target` para `/etc/systemd/user` sem o `Wants=gnome-software.service`. Verificado: após o
+reboot o processo não existe; uma chamada D-Bus o ativa (183 MB + dnf5daemon-server) e o app abre. A cópia não recebe
+updates do pacote; o restore apaga o arquivo.
 
-| Pacote | Quem exige |
+**Grupo 12.** A/B com reinstalação entre as medições: com typing-booster 758 MB, sem 681 MB. É um processo Python
+residente (~100 MB) mesmo com as fontes de entrada só em `xkb us`. Nada o exige; remove 21 pacotes (196 MB em disco).
+
+## Não removidos (PROTECTED ou sem ganho)
+
+| Serviço | Motivo |
 |---|---|
-| switcheroo-control | gnome-shell (Requires) |
-| geoclue2 | gnome-settings-daemon |
-| evolution-data-server | gnome-shell (libecal, libedataserver). Só dá para mascarar os serviços (grupo 7) |
-| udisks2 | gvfs, gnome-online-accounts |
-| NetworkManager, polkit, accountsservice, xdg-desktop-portal-gtk/gnome, ibus | sessão (ibus: gnome-shell/IME) |
-| localsearch (pacote) | gnome-classic-session, papers-nautilus; por isso só mask |
+| geoclue2, evolution-data-server, switcheroo-control | o dnf recusa: derrubaria o gnome-shell (via goa, gvfs, udisks2) |
+| mdadm | exigido pelo udisks2 |
+| NetworkManager, polkit, accountsservice, udisks2, xdg-desktop-portal-gtk/gnome | papel fixo na sessão |
+| Xwayland, mutter-x11-frames, ibus-x11 | sobem só quando existe cliente X11 (não ficam no idle); medidos só enquanto um app X11 estava aberto |
+| gvfs-afc/gphoto2/mtp/smb | ~1 MB; perde iPhone/câmera/Android/SMB |
+| colord, gssproxy, upower, uresourced, systemd-oomd, wpa_supplicant | 2–3 MB e têm dependentes (gsd, nfs, NM-wifi) |
+| gnome-software, firewalld, cups | cascatas: cups arrasta hplip/bluez-cups/gutenprint; avahi arrasta nss-mdns |
 
-## Armadilhas encontradas no teste
+## Conflitos com o UFWPS.sh
 
-- **Mascarar `gnome-software.service` quebra o app**: o D-Bus ativa o app pela mesma unit
-  (`NameHasNoOwner`). O `Wants=` está dentro de `gnome-session-services.target`; o grupo 3 copia o target
-  sem essa linha para `/etc/systemd/user/` (a cópia não recebe update do pacote). As chaves do
-  gsettings (`allow-updates`, `download-updates`) não param o daemon: testado, sem ganho.
-- `mdadm`, `cups`, `avahi`, `ibus` e `gnome-boxes` arrastam outros pacotes: cups leva hplip/bluez-cups,
-  avahi leva nss-mdns/hplip/spice-webdavd, remover `iscsi-initiator-utils` leva o gnome-boxes.
-  `libvirt*` (~30 sockets) só sai com o gnome-boxes (154 pacotes), por isso nenhum grupo mexe nisso.
-- auditd tem `RefuseManualStop`: o mask só vale no próximo boot. `audit-rules` fica.
-- tuned-ppd provê `ppd-service`: sem `--allowerasing` o dnf não troca.
-- Troca de firewall só foi validada em regras de entrada; portas extras abertas no firewalld
-  são avisadas, não migradas.
+| Ponto do UFWPS.sh | Conflito? |
+|---|---|
+| TLP (`remove power-profiles-daemon tuned tuned-ppd`, depois `install tlp`) | **Sim, no grupo 2.** O pacote tlp conflita só com tuned e laptop-mode-tools, mas ppd e TLP disputam governor/EPP. O g2 agora pula se o TLP está instalado (testado). Se o g2 rodar antes, o UFWPS remove o ppd por conta própria |
+| `dnf group upgrade core` (core inclui firewalld) | Não: `--assumeno` só mostra upgrades, nada reinstalado após o g11 |
+| `dnf update`, `upgrade @multimedia`, `autoremove` | Não: nenhum pacote removido volta (verificado em dry-run) |
+| Opção de manter/remover gnome-software | Não: o g3 só edita o target; sem o pacote o Wants= é inócuo |
+| `NetworkManager-wait-online` desativado, `set-local-rtc 0` | Não |
+| TLP mascara systemd-rfkill; g1 mascara ModemManager | Não |
 
-## Restore
-
-```
-sudo dnf install $(cat /var/lib/gnome-debloat/removed.txt)
-sudo systemctl unmask $(cat /var/lib/gnome-debloat/mascarados.txt)
-sudo systemctl --global unmask $(cat /var/lib/gnome-debloat/mascarados-user.txt)
-sudo rm -f $(cat /var/lib/gnome-debloat/arquivos.txt)
-```
-
-## Não testado
-
-Hardware real: laptop (TLP, bateria), modem, upower, bluetooth. NVIDIA. Medição foi AMD/VM sem GPU.
+Ressalva: `dnf group install core` (instalação nova, não upgrade) reinstalaria firewalld. O UFWPS não faz isso.

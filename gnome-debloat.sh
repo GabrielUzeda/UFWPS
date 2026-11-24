@@ -23,7 +23,7 @@ readonly PROTECTED=(
 readonly GRUPOS=(
   ''
   '1* servicos    auditd, ModemManager, systemd-homed, unbound-anchor, mcelog, mdraid, iscsi, sssd-kcm'
-  '2* energia     troca tuned + tuned-ppd pelo power-profiles-daemon (instala pacote)'
+  '2* energia     troca tuned + tuned-ppd pelo power-profiles-daemon (pulado se o TLP estiver instalado)'
   '3* gnome-sw    GNOME Software não sobe mais no login (abre sob demanda)'
   '4* indexador   localsearch (tracker): para de indexar'
   '5* a11y        orca e speech-dispatcher (leitor de tela)'
@@ -33,9 +33,11 @@ readonly GRUPOS=(
   '9  avahi       mDNS/DNS-SD (descoberta de impressora e nomes .local)'
   '10 tempo       troca chrony pelo systemd-timesyncd (sem NTS)'
   '11 firewall    troca o firewalld (daemon python) por regras nftables equivalentes'
+  '12 ibus-motores ibus-typing-booster (python residente) e motores asiáticos não usados'
+  '13 smartcard   pcscd + opensc (leitor de cartão/token); o gsd-smartcard do GNOME continua'
 )
 # Ganho em MB de PSS no idle, medido em VM Fedora 45 com reboot (docs/servicos-gnome.md); ruído ~4 MB.
-declare -A GANHO=([1]=10 [2]=31 [3]=330 [4]=10 [5]=0 [6]='0 (VM)' [7]=46 [8]=8 [9]='0 (ruído)' [10]=0 [11]=27)
+declare -A GANHO=([1]=10 [2]=31 [3]=330 [4]=10 [5]=0 [6]='0 (VM)' [7]=46 [8]=8 [9]='0 (ruído)' [10]=0 [11]=27 [12]=77 [13]=1)
 declare -A PERDA=(
   [1]='trilha de auditoria (auditd); modem 3G/4G, usuário systemd-homed e RAID por software ficam se estiverem em uso'
   [2]='o tuning do tuned (governor, ALPM do disco, powersave de áudio, sysctl); sobra o seletor de perfil do ppd'
@@ -48,6 +50,8 @@ declare -A PERDA=(
   [9]='achar impressora e compartilhamento na rede por nome; resolução de host.local'
   [10]='NTS e a precisão do chrony (timesyncd é só SNTP)'
   [11]='a zona FedoraWorkstation: sobra ssh, mDNS e dhcpv6 de entrada, portas 1025-65535 fecham; perde firewall-config/cmd'
+  [12]='digitação com sugestão/emoji por texto (typing-booster) e entrada chinês/japonês/coreano/indiano se você usa; o ibus e o teclado normal ficam'
+  [13]='login e PIV/PKCS#11 com cartão ou token (YubiKey PIV, e-CPF/e-CNPJ no navegador); GPG por smartcard usa scdaemon direto e pode precisar do pcscd'
 )
 
 dry=0
@@ -96,6 +100,8 @@ g1() { # auditd tem RefuseManualStop: mask vale no próximo boot. audit-rules (o
        mdmonitor.service iscsid.socket iscsiuio.socket iscsi-starter.service iscsi-onboot.service \
        sssd-kcm.socket; }
 g2() { rpm -q power-profiles-daemon >/dev/null 2>&1 && return 0
+  # o UFWPS tira o ppd de propósito quando instala o TLP (os dois brigam pelo governor/EPP)
+  rpm -q tlp >/dev/null 2>&1 && { echo "  TLP instalado: o ppd não entra, pulado"; return 0; }
   # tuned-ppd provê o mesmo ppd-service: --allowerasing troca um pelo outro
   run dnf install --assumeyes --allowerasing power-profiles-daemon 2>&1 | tail -2
   log removed.txt tuned-ppd; log instalados.txt power-profiles-daemon
@@ -150,6 +156,17 @@ NFT
   mask firewalld.service
   remove firewalld python3-firewall firewall-config firewall-applet; }
 
+# o typing-booster fica residente (~100 MB) mesmo sem estar nas fontes de entrada; nada o exige.
+# Só sai o que não está em org.gnome.desktop.input-sources: motores do ibus em uso são mantidos.
+g12() { local e p fontes
+  fontes=$(sudo -u "${SUDO_USER:-root}" gsettings get org.gnome.desktop.input-sources sources 2>/dev/null)
+  for p in ibus-typing-booster ibus-anthy ibus-hangul ibus-libpinyin ibus-m17n ibus-chewing; do
+    e=${p#ibus-}; [[ "$fontes" == *"$e"* ]] && { echo "  $p em uso nas fontes de entrada: fica"; continue; }
+    remove "$p"; done; }
+
+# pcsc-lite-libs fica: o gsd-smartcard do GNOME e o p11-kit ligam nela. Só some o daemon e o módulo PKCS#11.
+g13() { remove pcsc-lite opensc; }
+
 grupos=()
 for a in "$@"; do case "$a" in
   --dry-run) dry=1 ;; --list|-h|--help) usage; exit 0 ;;
@@ -159,7 +176,7 @@ for a in "$@"; do case "$a" in
 [ "$dry" = 1 ] || [ "$(id -u)" = 0 ] || { echo "rode com sudo"; exit 1; }
 
 for g in "${grupos[@]}"; do
-  [[ "$g" =~ ^([1-9]|1[01])$ ]] || { echo "grupo inválido: $g"; exit 1; }
+  [[ "$g" =~ ^([1-9]|1[0-3])$ ]] || { echo "grupo inválido: $g"; exit 1; }
   echo "== grupo $g: $(sed 's/  */ /g' <<<"${GRUPOS[$g]}" | cut -d' ' -f2)"
   "g$g"
 done
