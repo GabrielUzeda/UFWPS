@@ -340,6 +340,11 @@ install_extensions() {
     mkdir -p ~/.local/share/gnome-shell/extensions/
     cp -r ./extensions/* ~/.local/share/gnome-shell/extensions/.
 
+    # GNOME Shell does not compile extension schemas, without this the extensions that use GSettings fail to enable
+    for schema in ~/.local/share/gnome-shell/extensions/*/schemas; do
+        [ -d "$schema" ] && glib-compile-schemas "$schema"
+    done
+
     # List of extension IDs
     # shortcut: upstream metadata of do-not-disturb-while-screen-sharing-or-recording still lists GNOME 50,
     # the vendored copy was patched to accept 51 - re-download the extension once upstream adds 51
