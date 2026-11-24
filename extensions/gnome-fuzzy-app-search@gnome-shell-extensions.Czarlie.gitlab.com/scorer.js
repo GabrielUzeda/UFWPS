@@ -15,7 +15,7 @@
  */
 
 /**
- * Tokenize the keys of an object and assing each token a score.
+ * Tokenize the keys of an object and assign each token a score.
  *
  * Technically, you could use this to *not* tokenize anything and
  * return other things mapped to scores, but I don't see the use in that.

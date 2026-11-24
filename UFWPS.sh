@@ -132,7 +132,7 @@ debloat() {
             "cheese" "rhythmbox" "totem" "libreoffice-core"
             "gnome-boxes" "unoconv" "gnome-weather" "gnome-clocks"
             "gnome-calculator" "simple-scan" "mediawriter" "gnome-font-viewer"
-            "evince" "gnome-disk-utility" "baobab" "eog"
+            "papers" "evince" "gnome-disk-utility" "baobab" "eog"
             "gnome-calendar" "gnome-software" "gnome-logs" "loupe"
             "abrt" "snapshot" "firefox" "malcontent-control"
         )
@@ -211,13 +211,10 @@ show_help() {
             out "GNOME Extensions Installation Details:" center info
             out "- Will install several productivity-enhancing extensions:" left
             out "  • App Indicators: Adds support for legacy tray icons" left
-            out "  • Tiling Assistant: Improves window management" left
-            out "  • Hide Top Bar: Automatically hides the top panel" left
             out "  • Clipboard Indicator: Manages clipboard history" left
             out "  • Caffeine: Prevents system from sleeping" left
-            out "  • Fullscreen Notifications: Better notification handling" left
             out "  • Fuzzy App Search: Improves application search" left
-            out "  • Quick Settings Tweaks: Enhances quick settings menu" left
+            out "  • Do Not Disturb While Screen Sharing or Recording: Silences notifications while sharing" left
             ;;
         "mitigations")
             out "Performance Mitigations Details:" center info
@@ -339,27 +336,20 @@ install_theme() {
 }
 
 install_extensions() {
-    sudo dnf install -y gnome-extensions-app gnome-shell-extension-tool
+    sudo dnf install -y gnome-extensions-app
     mkdir -p ~/.local/share/gnome-shell/extensions/
     cp -r ./extensions/* ~/.local/share/gnome-shell/extensions/.
 
     # List of extension IDs
+    # shortcut: upstream metadata of do-not-disturb-while-screen-sharing-or-recording still lists GNOME 50,
+    # the vendored copy was patched to accept 51 - re-download the extension once upstream adds 51
     extensions=(
         "appindicatorsupport@rgcjonas.gmail.com"
-        "tiling-assistant@leleat-on-github"
-        "hidetopbar@mathieu.bidon.ca"
         "clipboard-indicator@tudmotu.com"
-        "caffeine@patapon.info" 
-        "fullscreen-notifications@sorrow.about.alice.pm.me" 
+        "caffeine@patapon.info"
         "gnome-fuzzy-app-search@gnome-shell-extensions.Czarlie.gitlab.com"
-        "quick-settings-tweaks@qwreey"
+        "do-not-disturb-while-screen-sharing-or-recording@marcinjahn.com"
     )
-
-    # Install QuickSettingsTweak (which needs to be done after a reboot)
-    git clone https://github.com/qwreey/quick-settings-tweaks quicksettings
-    cd ./quicksettings
-    bash ./install.sh install
-    cd ..
 
     # Check if the systemd user directory exists, if not, create it
     if [ ! -d ~/.config/systemd/user ]; then
@@ -406,6 +396,10 @@ optimizations() {
     out "Installing RPM Fusion repositories..." left info
     sudo dnf install -y --quiet https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
         https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
+    # Install Terra repository
+    out "Installing Terra repository..." left info
+    sudo dnf install -y --quiet --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra$(rpm -E %fedora)" terra-release
 
     # Enable S3 Deep Sleep for lower standby power consumption
     out "Enabling S3 Deep Sleep for reduced power consumption..." left info
@@ -471,8 +465,9 @@ optimizations() {
     elif echo "$cpu_info" | grep -q "AMD"; then
         chipset="AMD"
         out "AMD chipset detected. Installing AMD hardware acceleration drivers..." left info
-        sudo dnf swap --assumeyes --quiet mesa-va-drivers mesa-va-drivers-freeworld
-        sudo dnf swap --assumeyes --quiet mesa-vdpau-drivers mesa-vdpau-drivers-freeworld
+        # mesa-va-drivers was merged into mesa-dri-drivers in Mesa 26, so there is nothing to swap
+        sudo dnf install -y --quiet mesa-va-drivers-freeworld
+        sudo dnf swap --assumeyes --quiet mesa-vulkan-drivers mesa-vulkan-drivers-freeworld
     else
         chipset="Unknown"
     fi

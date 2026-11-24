@@ -32,6 +32,16 @@ import * as DBusMenu from './dbusMenu.js';
 
 const DEFAULT_ICON_SIZE = Panel.PANEL_ICON_SIZE || 16;
 
+function getClutterSettings() {
+    // When we will depend on GNOME 47 we can just use Clutter.Actor.get_context()
+    try {
+        const clutterContext = global.stage.context;
+        return clutterContext.get_settings();
+    } catch {
+        return Clutter.Settings.get_default();
+    }
+}
+
 export function addIconToPanel(statusIcon) {
     if (!(statusIcon instanceof BaseStatusIcon))
         throw TypeError(`Unexpected icon type: ${statusIcon}`);
@@ -81,6 +91,8 @@ class IndicatorBaseStatusIcon extends PanelMenu.Button {
 
         this._setIconActor(iconActor);
         this._showIfReady();
+
+        this.set_style(IndicatorBaseStatusIcon.DEFAULT_STYLE);
     }
 
     _setIconActor(icon) {
@@ -169,6 +181,9 @@ class IndicatorBaseStatusIcon extends PanelMenu.Button {
 
             Util.disconnectSmart(settings, this, this._iconContrastIds);
             delete this._iconContrastIds;
+
+            Util.disconnectSmart(settings, this, this._compactModeEnabledIds);
+            delete this._compactModeEnabledIds;
         } else if (this._icon && !monitoring) {
             this._iconSaturationIds =
                 Util.connectSmart(settings, 'changed::icon-saturation', this,
@@ -179,7 +194,23 @@ class IndicatorBaseStatusIcon extends PanelMenu.Button {
             this._iconContrastIds =
                 Util.connectSmart(settings, 'changed::icon-contrast', this,
                     this._updateBrightnessContrast);
+            this._compactModeEnabledIds =
+                Util.connectSmart(settings, 'changed::compact-mode-enabled', this,
+                    this._updateCompactMode);
         }
+    }
+
+    static get DEFAULT_STYLE() {
+        const settings = SettingsManager.getDefaultGSettings();
+        if (!settings.get_boolean('compact-mode-enabled'))
+            return null; // drop to default -natural-hpadding.
+
+        return '-natural-hpadding: 10px';
+    }
+
+    _updateCompactMode() {
+        this._icon.set_style(AppIndicator.IconActor.DEFAULT_STYLE);
+        this.set_style(IndicatorBaseStatusIcon.DEFAULT_STYLE);
     }
 
     _updateSaturation() {
@@ -225,6 +256,10 @@ class IndicatorStatusIcon extends BaseStatusIcon {
     _init(indicator) {
         super._init(0.5, indicator.accessibleName,
             new AppIndicator.IconActor(indicator, DEFAULT_ICON_SIZE));
+
+        // Disable upstream's click gesture and fall back to vfunc_button_press_event etc.
+        this._clickGesture?.set_enabled(false);
+
         this._indicator = indicator;
 
         this._lastClickTime = -1;
@@ -335,8 +370,7 @@ class IndicatorStatusIcon extends BaseStatusIcon {
     _updateClickCount(event) {
         const [x, y] = event.get_coords();
         const time = event.get_time();
-        const {doubleClickDistance, doubleClickTime} =
-            Clutter.Settings.get_default();
+        const {doubleClickDistance, doubleClickTime} = getClutterSettings();
 
         if (time > (this._lastClickTime + doubleClickTime) ||
             (Math.abs(x - this._lastClickX) > doubleClickDistance) ||
@@ -352,6 +386,7 @@ class IndicatorStatusIcon extends BaseStatusIcon {
         return this._clickCount;
     }
 
+    // FIXME: Add a double click gesture handle when we can depend on GNOME 49.
     _maybeHandleDoubleClick(event) {
         if (this._indicator.supportsActivation === false)
             return Clutter.EVENT_PROPAGATE;
@@ -368,7 +403,7 @@ class IndicatorStatusIcon extends BaseStatusIcon {
     }
 
     async _waitForDoubleClick() {
-        const {doubleClickTime} = Clutter.Settings.get_default();
+        const {doubleClickTime} = getClutterSettings();
         this._waitDoubleClickPromise = new PromiseUtils.TimeoutPromise(
             doubleClickTime);
 

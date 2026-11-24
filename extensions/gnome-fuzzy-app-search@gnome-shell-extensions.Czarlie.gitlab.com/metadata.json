@@ -13,9 +13,13 @@
     "45",
     "46",
     "47",
-    "48"
+    "48",
+    "49",
+    "50",
+    "51"
   ],
   "url": "https://gitlab.com/czarlie/gnome-fuzzy-app-search",
   "uuid": "gnome-fuzzy-app-search@gnome-shell-extensions.Czarlie.gitlab.com",
-  "version": 26
+  "version": 31,
+  "version-name": "5.1.1"
 }

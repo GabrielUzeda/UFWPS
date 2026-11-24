@@ -2,6 +2,8 @@
 
 A powerful and user-friendly post-installation script for Fedora Workstation that helps you set up your system with optimal configurations, essential software, and performance tweaks.
 
+Targeted at **Fedora Workstation 45** (GNOME 51).
+
 <div align="center">
   <img src="screenshot.png" alt="UFWPS Screenshot" width="800"/>
 </div>
@@ -10,12 +12,13 @@ A powerful and user-friendly post-installation script for Fedora Workstation tha
 
 ### Repository Management
 - Automatic RPM Fusion (free and nonfree) repository setup
+- Terra repository setup
 - Multimedia codec repository configuration
 - Optimized repository settings for better package management
 
 ### System Optimizatione
 - Hardware acceleration setup for Intel and AMD processors
-- Mesa driver optimization with freeworld drivers for better performance
+- Mesa driver optimization with freeworld VA-API and Vulkan drivers for better performance
 - Custom TKG kernel installation with CPU-specific optimizations
 - Performance mitigations management (optional)
 - Battery optimization using TLP (for laptops)
@@ -27,13 +30,10 @@ A powerful and user-friendly post-installation script for Fedora Workstation tha
 ### Desktop Environment
 - GNOME extensions installation:
   - App Indicators Support
-  - Tiling Assistant
-  - Hide Top Bar
   - Clipboard Indicator
   - Caffeine
-  - Fullscreen Notifications
   - Fuzzy App Search
-  - Quick Settings Tweaks
+  - Do Not Disturb While Screen Sharing or Recording
 
 ### Theming
 - Graphite GTK theme installation
@@ -46,7 +46,7 @@ A powerful and user-friendly post-installation script for Fedora Workstation tha
 - Advanced hardware acceleration support:
   - VA-API and VDPAU drivers
   - Intel Media Driver for 5th gen and newer
-  - Mesa freeworld drivers for AMD
+  - Mesa freeworld VA-API and Vulkan drivers for AMD
 - OpenH264 codec support for Firefox
 - Multimedia codecs and hardware acceleration
 
@@ -140,7 +140,8 @@ This project wouldn't be possible without the amazing work of these projects and
 - [Fedora 41 Post Install Guide](https://github.com/devangshekhawat/Fedora-41-Post-Install-Guide) by devangshekhawat
 - [Mesa Freeworld Drivers](https://rpmfusion.org/Howto/Multimedia)
 - [NVIDIA Drivers](https://rpmfusion.org/Howto/NVIDIA)
-- [Quick Settings Tweaks](https://github.com/qwreey/quick-settings-tweaks)
+- [Terra Repository](https://terra.fyralabs.com/)
+- [Do Not Disturb While Screen Sharing Or Recording](https://github.com/marcinjahn/gnome-do-not-disturb-while-screen-sharing-or-recording-extension)
 
 Special thanks to all GNOME Extension developers and the Fedora community for their continuous contributions to making Linux better for everyone.
 

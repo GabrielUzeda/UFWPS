@@ -7,9 +7,13 @@
   "shell-version": [
     "45",
     "46",
-    "47"
+    "47",
+    "48",
+    "49",
+    "50",
+    "51"
   ],
   "url": "https://github.com/ubuntu/gnome-shell-extension-appindicator",
   "uuid": "appindicatorsupport@rgcjonas.gmail.com",
-  "version": 59
+  "version": 66
 }
