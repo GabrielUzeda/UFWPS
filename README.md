@@ -81,7 +81,7 @@ chmod +x UFWPS.sh
 
 ## 📉 GNOME service debloat: measured gains
 
-`gnome-debloat.sh` was measured in a stock Fedora 45 GNOME 51 VM (QEMU/KVM, 4 GB RAM, 4 vCPU). Each sample is a fresh VM booted from a throwaway snapshot: apply the group, reboot, wait 170 s, then sum the PSS of all processes. Reported value is the **median** of the valid samples (the baseline spread is about 8 MB, so gains under ~10 MB are noise). Samples where gnome-software was in a different state than usual, or where the VM failed to boot, were discarded.
+`gnome-debloat.sh` was measured in a stock Fedora 45 GNOME 51 VM (QEMU/KVM, 4 GB RAM, 4 vCPU). Each sample is a fresh VM booted from a throwaway snapshot: apply the group, reboot, wait 170 s, then sum the PSS of all processes. Reported value is the **median** of the valid samples (the baseline spread is about 8 MB, so gains under ~10 MB are noise). Groups 1-4, 7, 11, 12, all and full have 3-4 samples (see notes); groups 5, 6, 8, 9, 10, 13 and the baseline have 5.
 
 | Group | Median idle PSS (MB) | Gain (MB) | Samples |
 |---|---|---|---|
@@ -90,19 +90,30 @@ chmod +x UFWPS.sh
 | 2 power (ppd instead of tuned) | 1187 | -38 | 3 |
 | 3 gnome-software on demand | 888 | -337 | 3 |
 | 4 indexer | 1220 | -5 | 3 |
-| 5 a11y | 1234 | ~0 | 2 |
-| 6 vmguest | 1230 | ~0 | 4 |
+| 5 a11y | 1232 | ~0 | 5 |
+| 6 vmguest | 1229 | ~0 | 5 |
 | 7 calendar/contacts | 1181 | -44 | 3 |
-| 8 print | 1223 | ~0 | 3 |
-| 9 avahi | 1226 | ~0 | 3 |
-| 10 time sync | 1232 | ~0 | 4 |
+| 8 print | 1215 | ~0 | 5 |
+| 9 avahi | 1221 | ~0 | 5 |
+| 10 time sync | 1228 | ~0 | 5 |
 | 11 firewall (nftables) | 1202 | -24 | 4 |
 | 12 ibus engines | 1163 | -62 | 4 |
-| 13 smartcard | 1229 | ~0 | 4 |
+| 13 smartcard | 1224 | ~0 | 5 |
 | **`all` (groups 1-6)** | **832** | **-393 (-32%)** | 4 |
 | **all 13 groups** | **666** | **-558 (-46%)** | 4 |
 
-Notes: group 3 stops gnome-software and the daemons it pulls in (flatpak helper, dnf5daemon) from starting at login, which is why it dominates; the individual gains do not add up exactly because of overlap. Groups 5, 6, 8, 9, 10 and 13 save disk or attack surface rather than idle RAM. The VM has no physical hardware, so group 6 (VM guest agents) was not exercised. Per-service analysis: [docs/servicos-gnome.md](docs/servicos-gnome.md).
+Notes: group 3 stops gnome-software and the daemons it pulls in (flatpak helper, dnf5daemon) from starting at login, which is why it dominates; the individual gains do not add up exactly because of overlap. Groups 5, 6, 8, 9, 10 and 13 were re-measured with 5 valid samples each (baseline included, no sample discarded; a failed VM was simply re-run). The median shows no RAM gain (within the ~10 MB noise): the services they target either do not run at idle (orca, speech-dispatcher, guest agents) or use only 1-3 MB of PSS (cupsd 3, chronyd 1.5, pcscd 1.6, avahi 1). What they do save is disk, packages and attack surface:
+
+| Group | Disk freed (MB) | Packages removed |
+|---|---|---|
+| 5 a11y | ~95 | 13 |
+| 6 vmguest | ~7 | 8 |
+| 8 print | ~73 | 26 |
+| 9 avahi | 0 (masked only) | 0 |
+| 10 time sync | ~75 | 51 |
+| 13 smartcard | ~3 | 5 |
+
+Group 6 only shows this on a VM with the agents installed; on bare metal it removes packages that are not running. Single samples can spike by 100-280 MB for reasons outside gnome-software (seen in base, g5 and g9), so the median is reported. The VM has no physical hardware, so group 6 (VM guest agents) was not exercised. Per-service analysis: [docs/servicos-gnome.md](docs/servicos-gnome.md).
 
 ## 🌟 Recommendations
 
