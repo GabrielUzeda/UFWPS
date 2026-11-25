@@ -81,28 +81,28 @@ chmod +x UFWPS.sh
 
 ## 📉 GNOME service debloat: measured gains
 
-`gnome-debloat.sh` was measured in a stock Fedora 45 GNOME 51 VM (QEMU/KVM, 4 GB RAM, 4 vCPU). Each sample is a fresh VM booted from a throwaway snapshot: apply the group, reboot, wait 170 s, then sum the PSS of all processes. Reported value is the **median** of the valid samples (the baseline spread is about 8 MB, so gains under ~10 MB are noise). Groups 1-4, 7, 11, 12, all and full have 3-4 samples (see notes); groups 5, 6, 8, 9, 10, 13 and the baseline have 5.
+`gnome-debloat.sh` was measured in a stock Fedora 45 GNOME 51 VM (QEMU/KVM, 4 GB RAM, 4 vCPU). Each sample is a fresh VM booted from a throwaway snapshot: apply the group, reboot, wait 170 s, then sum the PSS of all processes. Every configuration has **5 valid samples**, none discarded (a VM that failed to boot was simply re-run). The value is the **median**; the sample spread is 1-8 MB, so gains under ~10 MB are noise.
 
 | Group | Median idle PSS (MB) | Gain (MB) | Samples |
 |---|---|---|---|
-| baseline (no group) | 1225 | - | 5 |
-| 1 services | 1214 | -10 | 4 |
-| 2 power (ppd instead of tuned) | 1187 | -38 | 3 |
-| 3 gnome-software on demand | 888 | -337 | 3 |
-| 4 indexer | 1220 | -5 | 3 |
+| baseline (no group) | 1221 | - | 5 |
+| 1 services | 1213 | -8 | 5 |
+| 2 power (ppd instead of tuned) | 1182 | -39 | 5 |
+| 3 gnome-software on demand | 889 | -332 | 5 |
+| 4 indexer | 1218 | -3 | 5 |
 | 5 a11y | 1232 | ~0 | 5 |
 | 6 vmguest | 1229 | ~0 | 5 |
-| 7 calendar/contacts | 1181 | -44 | 3 |
+| 7 calendar/contacts | 1177 | -44 | 5 |
 | 8 print | 1215 | ~0 | 5 |
 | 9 avahi | 1221 | ~0 | 5 |
 | 10 time sync | 1228 | ~0 | 5 |
-| 11 firewall (nftables) | 1202 | -24 | 4 |
-| 12 ibus engines | 1163 | -62 | 4 |
+| 11 firewall (nftables) | 1199 | -22 | 5 |
+| 12 ibus engines | 1159 | -62 | 5 |
 | 13 smartcard | 1224 | ~0 | 5 |
-| **`all` (groups 1-6)** | **832** | **-393 (-32%)** | 4 |
-| **all 13 groups** | **666** | **-558 (-46%)** | 4 |
+| **`all` (groups 1-6)** | **833** | **-388 (-32%)** | 5 |
+| **all 13 groups** | **667** | **-554 (-45%)** | 5 |
 
-Notes: group 3 stops gnome-software and the daemons it pulls in (flatpak helper, dnf5daemon) from starting at login, which is why it dominates; the individual gains do not add up exactly because of overlap. Groups 5, 6, 8, 9, 10 and 13 were re-measured with 5 valid samples each (baseline included, no sample discarded; a failed VM was simply re-run). The median shows no RAM gain (within the ~10 MB noise): the services they target either do not run at idle (orca, speech-dispatcher, guest agents) or use only 1-3 MB of PSS (cupsd 3, chronyd 1.5, pcscd 1.6, avahi 1). What they do save is disk, packages and attack surface:
+Notes: group 3 stops gnome-software and the daemons it pulls in (flatpak helper, dnf5daemon) from starting at login, which is why it dominates; the individual gains do not add up exactly because of overlap. Groups 5, 6, 8, 9, 10 and 13 show no RAM gain: the services they target either do not run at idle (orca, speech-dispatcher, guest agents) or use only 1-3 MB of PSS (cupsd 3, chronyd 1.5, pcscd 1.6, avahi 1). What they do save is disk, packages and attack surface:
 
 | Group | Disk freed (MB) | Packages removed |
 |---|---|---|
@@ -113,7 +113,7 @@ Notes: group 3 stops gnome-software and the daemons it pulls in (flatpak helper,
 | 10 time sync | ~75 | 51 |
 | 13 smartcard | ~3 | 5 |
 
-Group 6 only shows this on a VM with the agents installed; on bare metal it removes packages that are not running. Single samples can spike by 100-280 MB for reasons outside gnome-software (seen in base, g5 and g9), so the median is reported. The VM has no physical hardware, so group 6 (VM guest agents) was not exercised. Per-service analysis: [docs/servicos-gnome.md](docs/servicos-gnome.md).
+Group 6 only shows this on a VM with the agents installed; on bare metal it removes packages that are not running. A single sample can spike 100-280 MB for reasons outside gnome-software (seen once each in the baseline, g5 and g9), which is why the median is reported. The VM has no physical hardware. Per-service analysis: [docs/servicos-gnome.md](docs/servicos-gnome.md).
 
 ## 🌟 Recommendations
 

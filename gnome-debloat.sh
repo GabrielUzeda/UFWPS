@@ -37,7 +37,7 @@ readonly GRUPOS=(
   '13 smartcard   pcscd + opensc (leitor de cartão/token); o gsd-smartcard do GNOME continua'
 )
 # Ganho em MB de PSS no idle, medido em VM Fedora 45 com reboot (docs/servicos-gnome.md); ruído ~4 MB.
-declare -A GANHO=([1]=10 [2]=31 [3]=330 [4]=10 [5]=0 [6]='0 (VM)' [7]=46 [8]=8 [9]='0 (ruído)' [10]=0 [11]=27 [12]=77 [13]=1)
+declare -A GANHO=([1]=8 [2]=39 [3]=332 [4]=3 [5]=0 [6]='0 (VM)' [7]=44 [8]=0 [9]='0 (ruído)' [10]=0 [11]=22 [12]=62 [13]=0)
 declare -A PERDA=(
   [1]='trilha de auditoria (auditd); modem 3G/4G, usuário systemd-homed e RAID por software ficam se estiverem em uso'
   [2]='o tuning do tuned (governor, ALPM do disco, powersave de áudio, sysctl); sobra o seletor de perfil do ppd'

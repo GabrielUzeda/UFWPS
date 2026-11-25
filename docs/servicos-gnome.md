@@ -4,25 +4,25 @@ Medido em VM Fedora 45 Workstation limpa (QEMU/KVM, 4 GB, AMD passthrough). PSS 
 com reboot e ~170 s de espera antes de cada medição; ruído ~4 MB. Script: `gnome-debloat.sh` (`--list`, `--dry-run`,
 `all` = grupos 1–6). Restore: cabeçalho do script (estado em `/var/lib/gnome-debloat/`).
 
-Bateria final (mediana de 2–5 amostras por configuração, VM nova por amostra, ver README): baseline 1225 MB, `all` 832 MB (−393), todos os 13 grupos 666 MB (−558, −46%). Ganhos abaixo de ~10 MB estão no ruído.
+Bateria final (mediana de 5 amostras por configuração, VM nova por amostra, ver README): baseline 1221 MB, `all` 833 MB (−388), todos os 13 grupos 667 MB (−554, −45%). Ganhos abaixo de ~10 MB estão no ruído.
 
 ## Grupos
 
 | Grupo | O que faz | Ganho (MB) | Em `all` | Perde |
 |---|---|---|---|---|
-| 1 servicos | mascara auditd, ModemManager, systemd-homed, unbound-anchor, mcelog, mdraid, iscsi, sssd-kcm | 10 | sim | trilha de auditoria; modem, homed e RAID se em uso |
-| 2 energia | tuned + tuned-ppd → power-profiles-daemon (mesma API D-Bus) | 38 | sim | tuning do tuned; pulado se o TLP está instalado |
-| 3 gnome-sw | gnome-software deixa de subir no login (abre sob demanda) | 337 (inclui dnf5daemon e helpers que ele puxa) | sim | refresh e aviso de update em segundo plano |
-| 4 indexador | mascara localsearch (tracker) | ~5 | sim | busca por conteúdo |
+| 1 servicos | mascara auditd, ModemManager, systemd-homed, unbound-anchor, mcelog, mdraid, iscsi, sssd-kcm | 8 | sim | trilha de auditoria; modem, homed e RAID se em uso |
+| 2 energia | tuned + tuned-ppd → power-profiles-daemon (mesma API D-Bus) | 39 | sim | tuning do tuned; pulado se o TLP está instalado |
+| 3 gnome-sw | gnome-software deixa de subir no login (abre sob demanda) | 332 (inclui dnf5daemon e helpers que ele puxa) | sim | refresh e aviso de update em segundo plano |
+| 4 indexador | mascara localsearch (tracker) | ~3 | sim | busca por conteúdo |
 | 5 a11y | remove orca, speech-dispatcher | 0 (só disco) | sim | leitor de tela |
 | 6 vmguest | remove agentes de VM (pulado em VM) | 0 | sim | integração do hypervisor |
 | 7 calendario | mascara evolution-source-registry e factories | 44 | não | agenda no menu de data, Calendar/Contacts |
 | 8 print | remove cups, hplip, filtros | ~0 | não | impressão/escaneamento |
 | 9 avahi | mascara avahi | ~0 | não | descoberta mDNS (impressora, .local) |
 | 10 tempo | chrony → systemd-timesyncd | ~0 | não | NTS |
-| 11 firewall | firewalld → tabela nftables equivalente | 24 | não | zona FedoraWorkstation (portas 1025-65535 fecham) |
+| 11 firewall | firewalld → tabela nftables equivalente | 22 | não | zona FedoraWorkstation (portas 1025-65535 fecham) |
 | 12 ibus-motores | remove ibus-typing-booster e motores CJK/indic fora das fontes de entrada | 62 | não | digitação com sugestão/emoji, CJK |
-| 13 smartcard | remove pcsc-lite + opensc (mantém pcsc-lite-libs) | ~1 | não | login/PIV/PKCS#11 com cartão ou token |
+| 13 smartcard | remove pcsc-lite + opensc (mantém pcsc-lite-libs) | 0 (só disco, ~3 MB) | não | login/PIV/PKCS#11 com cartão ou token |
 
 Por que alguns dão ~0: orca, speech-dispatcher e agentes de VM não rodam no idle (ganho só em disco, e a VM QEMU
 não tem vbox/vmware/spice); avahi (~1 MB) e chrony (~2 MB, trocado por timesyncd ~1 MB) estão no ruído.
